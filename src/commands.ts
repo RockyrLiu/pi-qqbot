@@ -225,6 +225,15 @@ async function cmdRemoteTools(args: string, ctx: Ctx, deps: CommandDeps): Promis
   deps.notify(`QQ 端 /tools 已${config.allowRemoteTools ? '开启 ✅（注意：QQ 消息将可修改本机工具权限）' : '关闭 ❌'}`, 'info')
 }
 
+/**
+ * 重载扩展运行时（等同于 /reload）。
+ * 会触发 session_shutdown → 停止 QQ 桥接；若已开启 autostart，session_start 会自动重连。
+ */
+async function cmdReload(ctx: ExtensionCommandContext, deps: CommandDeps): Promise<void> {
+  deps.notify('🔄 正在重载扩展（已开启 autostart 时桥接会自动重连）…', 'info')
+  await ctx.reload()
+}
+
 async function cmdRender(args: string, ctx: Ctx, deps: CommandDeps): Promise<void> {
   deps.setLatestCtx(ctx)
   const config = await loadConfig(true)
@@ -305,7 +314,7 @@ async function cmdGroups(args: string, ctx: Ctx, deps: CommandDeps): Promise<voi
 
 export function registerCommands(pi: ExtensionAPI, deps: CommandDeps): void {
   pi.registerCommand('qq', {
-    description: 'QQ 桥接管理：login | start | stop | status | config | groups | render | sandbox | logout | autostart | remotetools',
+    description: 'QQ 桥接管理：login | start | stop | status | config | groups | render | sandbox | logout | autostart | remotetools | reload',
     handler: async (args, ctx) => {
       const [sub, ...rest] = args.trim().split(/\s+/)
       const restArgs = rest.join(' ')
@@ -322,6 +331,7 @@ export function registerCommands(pi: ExtensionAPI, deps: CommandDeps): void {
         '/qq logout            清除凭证并停止',
         '/qq autostart         开关自动启动',
         '/qq remotetools       开关 QQ 端 /tools 命令（默认禁用）',
+        '/qq reload            重载扩展（重新加载代码与资源）',
       ].join('\n')
       switch (sub) {
         case 'login':
@@ -346,6 +356,8 @@ export function registerCommands(pi: ExtensionAPI, deps: CommandDeps): void {
           return cmdAutostart(restArgs, ctx, deps)
         case 'remotetools':
           return cmdRemoteTools(restArgs, ctx, deps)
+        case 'reload':
+          return cmdReload(ctx, deps)
         default:
           deps.notify(`未知子命令: ${sub || '(无)'}\n\n${help}`, 'warning')
       }

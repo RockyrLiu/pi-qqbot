@@ -16,6 +16,8 @@ export interface RemoteCommandDeps {
   client: () => QqClient | null
   queueLength: () => number
   isRemoteToolsEnabled: () => Promise<boolean>
+  /** autostart 是否开启：决定是否允许远程 /reload（重载会断开桥接）。 */
+  isAutoStartEnabled: () => boolean
 }
 
 type RemoteCommandFn = (
@@ -112,6 +114,21 @@ const commands: Record<string, RemoteCommandFn> = {
     if (ctx.isIdle()) return '当前没有在执行任务'
     ctx.abort()
     return '✅ 已发送停止信号'
+  },
+
+  async reload(_args, conversationId, client, deps) {
+    if (!deps.isAutoStartEnabled()) {
+      return [
+        '⚠️ 已拒绝：未开启 autostart',
+        '',
+        '/reload 会重载扩展并断开 QQ 桥接；autostart 关闭时不会自动重连。',
+        '请先在电脑端 TUI 执行 /qq autostart 开启后再试。',
+      ].join('\n')
+    }
+    await client.sendText(conversationId, '🔄 正在重载扩展，桥接会自动重连…')
+    // ctx.reload() 只在 ExtensionCommandContext 上可用，因此转发给 /qq reload 命令执行
+    deps.pi.sendUserMessage('/qq reload', { deliverAs: 'followUp', expandPromptTemplates: true })
+    return null
   },
 
   async status(_args, _conversationId, _client, deps) {
@@ -269,6 +286,7 @@ const commands: Record<string, RemoteCommandFn> = {
       '/model           查看 / 切换模型',
       '/compact         压缩上下文',
       '/thinking        查看 / 设置 thinking level',
+      '/reload          重载扩展（需电脑端已开启 /qq autostart）',
       '/name <名称>     设置会话名称',
       '/session         查看会话详情',
       '/config          查看图片相关配置',
