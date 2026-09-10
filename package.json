@@ -5,7 +5,7 @@
   "description": "QQ 机器人作为 pi TUI 的移动端分身 — 通过 QQ 私聊/群聊远程与 pi 双向交互",
   "main": "index.ts",
   "license": "MIT",
-  "homepage": "https://github.com/shenjiecode/pi-qqbot#readme",
+  "homepage": "https://github.com/RockyrLiu/pi-qqbot#readme",
   "keywords": [
     "pi",
     "pi-package",
