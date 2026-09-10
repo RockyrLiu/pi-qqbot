@@ -20,14 +20,22 @@ test.after(() => {
 
 function fakePi() {
   const events = new Set()
+  const handlers = new Map()
   const commands = new Map()
   const tools = new Map()
   return {
     events,
+    handlers,
     commands,
     tools,
-    on(name) {
+    getActiveTools: () => [],
+    on(name, handler) {
       events.add(name)
+      if (typeof handler === 'function') {
+        const list = handlers.get(name) ?? []
+        list.push(handler)
+        handlers.set(name, list)
+      }
     },
     registerCommand(name, options) {
       commands.set(name, options)
@@ -51,9 +59,18 @@ test('扩展订阅关键生命周期事件', () => {
   const pi = fakePi()
   factory(pi)
 
-  for (const name of ['session_start', 'input', 'before_agent_start', 'agent_start', 'message_end', 'agent_end', 'session_shutdown']) {
+  for (const name of ['session_start', 'input', 'before_agent_start', 'agent_start', 'tool_call', 'message_end', 'agent_end', 'session_shutdown']) {
     assert.ok(pi.events.has(name), `应订阅 ${name}`)
   }
+})
+
+test('桥接未运行时 ask_user_question 不被拦截（电脑端 TUI 照常可用）', async () => {
+  const pi = fakePi()
+  factory(pi)
+  const handlers = pi.handlers.get('tool_call') ?? []
+  assert.equal(handlers.length, 1, '应注册一个 tool_call 处理器')
+  const result = await handlers[0]({ type: 'tool_call', toolName: 'ask_user_question', toolCallId: 't1', input: {} })
+  assert.equal(result, undefined)
 })
 
 test('/qq status 在未登录时给出提示而不抛错', async () => {

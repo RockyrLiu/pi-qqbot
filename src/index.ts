@@ -9,7 +9,7 @@ import { Type } from 'typebox'
 import type { ExtensionAPI, ExtensionContext, ExtensionCommandContext } from '@earendil-works/pi-coding-agent'
 import { QqClient } from './client.ts'
 import { acquireLock, releaseLock, loadCredentials } from './auth.ts'
-import { loadConfig } from './config.ts'
+import { loadConfig, getConfigCache } from './config.ts'
 import { debugLog, isDebugEnabled } from './logger.ts'
 import { MessageQueue } from './queue.ts'
 import { handleRemoteCommand, type RemoteCommandDeps } from './remote-commands.ts'
@@ -22,6 +22,13 @@ import {
   UNSUPPORTED_REPLY,
 } from './constants.ts'
 import type { IncomingMessage } from './types.ts'
+import {
+  ASK_TOOL_NAME,
+  QQ_ASK_BLOCK_REASON,
+  buildAskGuidanceMessage,
+  shouldBlockAskTool,
+  shouldInjectAskGuidance,
+} from './ask-fallback.ts'
 
 type Ctx = ExtensionContext | ExtensionCommandContext
 
@@ -282,6 +289,7 @@ export default function qqBot(pi: ExtensionAPI) {
     client: () => client,
     queueLength: () => queue.pending,
     isRemoteToolsEnabled: async () => (await loadConfig()).allowRemoteTools === true,
+    isAutoStartEnabled: () => getConfigCache().autoStart === true,
   }
 
   // --- TUI 命令注册 ---
@@ -432,15 +440,41 @@ export default function qqBot(pi: ExtensionAPI) {
     queue.pendingTurnOrigin = null
   })
 
-  // 系统提示词注入
+  // 当前轮次是否由 QQ 触发（直投 pendingInjection，或忙时以 followUp 投递）。
+  function isQqTurn(): boolean {
+    return queue.pendingInjection !== null || queue.pendingTurnOrigin !== null
+  }
+
+  // 系统提示词注入 + QQ 轮次的 TUI 问卷降级
   pi.on('before_agent_start', async (event, ctx) => {
     latestCtx = ctx
     const request = queue.pendingInjection ?? queue.activeRequest
-    log(`[BEFORE-AGENT] turnSeq=${turn.seq} pendingInjection=${!!queue.pendingInjection} activeRequest=${!!queue.activeRequest} willInject=${!!request}`)
-    if (!request) return
-    const injectedPrompt = buildSystemPrompt(event.systemPrompt)
-    log('[BEFORE-AGENT-INJECT] injecting qq system prompt')
-    return { systemPrompt: injectedPrompt }
+    const qqTurn = isQqTurn()
+    log(`[BEFORE-AGENT] turnSeq=${turn.seq} pendingInjection=${!!queue.pendingInjection} activeRequest=${!!queue.activeRequest} willInject=${!!request} qqTurn=${qqTurn}`)
+
+    const systemPrompt = request ? buildSystemPrompt(event.systemPrompt) : undefined
+    if (request) log('[BEFORE-AGENT-INJECT] injecting qq system prompt')
+
+    // QQ 端看不到、也无法操作 TUI 问卷弹窗：提前让模型改用文本提问。
+    const askGuidance = shouldInjectAskGuidance({
+      running,
+      qqTurn,
+      askToolActive: pi.getActiveTools().includes(ASK_TOOL_NAME),
+    })
+    if (askGuidance) log('[BEFORE-AGENT-INJECT] injecting ask_user_question fallback guidance')
+
+    if (!systemPrompt && !askGuidance) return
+    return {
+      systemPrompt,
+      message: askGuidance ? buildAskGuidanceMessage() : undefined,
+    }
+  })
+
+  // QQ 轮次拦截 TUI 问卷工具：模型收到 block 原因后会改用文本提问
+  pi.on('tool_call', async (event) => {
+    if (!shouldBlockAskTool(event.toolName, { running, qqTurn: turn.qqConversationActive })) return
+    log(`[TOOL-CALL-BLOCK] ${ASK_TOOL_NAME} 在 QQ 轮次被拦截`)
+    return { block: true, reason: QQ_ASK_BLOCK_REASON }
   })
 
   // agent 开始 → 记录 turn 元数据

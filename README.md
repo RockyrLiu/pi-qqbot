@@ -17,6 +17,7 @@ QQ 用户发消息注入当前 pi 会话，pi 的回复增量发回 QQ；人不�
 | 自动启动 | 会话启动时自动连接网关（`/qq autostart`） |
 | Markdown 渲染 | 优先 QQ 原生 Markdown，失败自动降级纯文本并记住结果 |
 | 会话安全 | 单聊仅绑定用户；群聊默认白名单，需显式 `/qq groups add` 或 `allowall on` |
+| 问卷降级 | QQ 轮次自动拦截 `ask_user_question`，引导模型改用文本编号提问（电脑端 TUI 不受影响） |
 
 ## 前置条件
 
@@ -104,6 +105,7 @@ pi install /绝对/路径/pi_qqbot -l # 仅当前项目（.pi/settings.json）
 - QQ 原生 Markdown 需机器人开通权限，未开通时自动降级纯文本。
 - QQ 无输入中状态接口；附件基本为图片，非图片附件以文字提示呈现。
 - 富媒体发送受 QQ `file_data` 类型/大小限制，失败时工具返回错误信息。
+- `ask_user_question` 在 QQ 轮次不可用：TUI 问卷是阻塞式的，QQ 端无法作答，也已无扩展侧作答 API。pi-qqbot 会在 QQ 轮次注入提示并拦截该工具，让模型直接用编号列表提问；你在电脑前时它仍照常工作。
 
 ## 开发与测试
 
