@@ -68,10 +68,10 @@ pi install /绝对/路径/pi_qqbot -l # 仅当前项目（.pi/settings.json）
 ## QQ 端远程命令
 
 ```text
-/status  /stop  /model  /name <名称>  /session  /config  /help
+/status  /stop  /model  /compact  /thinking  /name <名称>  /session  /config  /help
 ```
 
-高级：`/thinking`、`/compact`；`/tools` 默认禁用，需电脑端 `/qq remotetools on`。直接发文字或图片即为正常对话。
+`/tools` 默认禁用，需电脑端 `/qq remotetools on`。直接发文字或图片即为正常对话。
 
 ## 配置
 
