@@ -29,9 +29,18 @@ QQ 用户发消息注入当前 pi 会话，pi 的回复增量发回 QQ；人不�
 
 ## 安装
 
+从 GitHub 安装（推荐）：
+
 ```bash
-pi install /绝对/路径/pi_qqbot   # 全局
-pi install /绝对/路径/pi_qqbot -l # 仅当前项目（.pi/settings.json）
+pi install git:github.com/RockyrLiu/pi-qqbot        # 默认装 main
+pi install git:github.com/RockyrLiu/pi-qqbot@v0.1.0   # 固定 tag 版本（需仓库已打 tag）
+```
+
+本地开发安装：
+
+```bash
+pi install /本地/绝对/路径/pi-qqbot   # 全局
+pi install -l <source>              # 只装到当前项目（.pi/settings.json）
 ```
 
 装完重启 pi 或 `/reload`，输入 `/qq status` 能看到状态即加载成功。
