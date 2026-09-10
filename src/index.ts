@@ -152,12 +152,12 @@ export default function qqBot(pi: ExtensionAPI) {
     }
     if (running) {
       const pending = queue.pending
-      const ready = client?.isReady ? '✅' : '⏳'
-      latestCtx.ui.setStatus('qq', `[QQ ${ready} 已连接${pending > 0 ? ` | 待处理:${pending}` : ''}]`)
+      const status = client?.isReady ? 'Connected' : 'Connecting'
+      latestCtx.ui.setStatus('qq', `[QQ ${status}${pending > 0 ? ` | pending:${pending}` : ''}]`)
     } else if (client) {
-      latestCtx.ui.setStatus('qq', '[QQ ⏸ 未连接]')
+      latestCtx.ui.setStatus('qq', '[QQ Disconnected]')
     } else {
-      latestCtx.ui.setStatus('qq', '[QQ ❌ 未登录]')
+      latestCtx.ui.setStatus('qq', '[QQ Not logged in]')
     }
   }
 
