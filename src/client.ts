@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { readFile } from 'node:fs/promises'
+import * as path from 'node:path'
 import {
   apiBaseFor,
   buildSendBody,
@@ -403,11 +404,13 @@ export class QqClient {
     await this.sendRaw(conversationId, 7, '', { file_info: result.fileInfo })
   }
 
-  async sendFile(conversationId: string, filePath: string, _fileName?: string): Promise<void> {
+  async sendFile(conversationId: string, filePath: string, fileName?: string): Promise<void> {
     const conversation = this.requireConversation(conversationId)
     const data = await readFile(filePath)
     this.assertSize(data.length)
-    const result = await this.uploadMedia(conversation, 4, data.toString('base64'))
+    // QQ 富媒体上传必须带 file_name，否则客户端显示「未命名」。
+    const name = fileName?.trim() || path.basename(filePath)
+    const result = await this.uploadMedia(conversation, 4, data.toString('base64'), name)
     await this.sendRaw(conversationId, 7, '', { file_info: result.fileInfo })
   }
 
@@ -417,11 +420,17 @@ export class QqClient {
     }
   }
 
-  private async uploadMedia(conversation: ConversationState, fileType: number, fileData: string): Promise<UploadMediaResult> {
+  private async uploadMedia(
+    conversation: ConversationState,
+    fileType: number,
+    fileData: string,
+    fileName?: string,
+  ): Promise<UploadMediaResult> {
+    const params = { fileType, fileData, fileName }
     return this.withToken((token) =>
       conversation.kind === 'c2c'
-        ? uploadC2cMedia(this.apiBase, token, conversation.target, { fileType, fileData }, this.abort.signal)
-        : uploadGroupMedia(this.apiBase, token, conversation.target, { fileType, fileData }, this.abort.signal),
+        ? uploadC2cMedia(this.apiBase, token, conversation.target, params, this.abort.signal)
+        : uploadGroupMedia(this.apiBase, token, conversation.target, params, this.abort.signal),
     )
   }
 

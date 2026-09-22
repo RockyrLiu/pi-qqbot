@@ -8,6 +8,7 @@ import {
   QqApiError,
   apiBaseFor,
   buildSendBody,
+  buildUploadBody,
   buildConnectUrl,
   decryptSecret,
   isTokenInvalidError,
@@ -57,5 +58,25 @@ test('buildSendBody：Markdown 用 markdown.content，文本用 content', () => 
     msg_type: 7,
     content: '',
     media: { file_info: 'f' },
+  })
+})
+
+test('buildUploadBody：文件类型必须携带 file_name（否则 QQ 显示未命名）', () => {
+  assert.deepEqual(buildUploadBody({ fileType: 4, fileData: 'ZGF0YQ==', fileName: 'README.md' }), {
+    file_type: 4,
+    sdk_id: '',
+    file_data: 'ZGF0YQ==',
+    file_name: 'README.md',
+  })
+  // 未提供文件名时不应写入空 file_name。
+  assert.deepEqual(buildUploadBody({ fileType: 1, fileData: 'ZGF0YQ==' }), {
+    file_type: 1,
+    sdk_id: '',
+    file_data: 'ZGF0YQ==',
+  })
+  assert.deepEqual(buildUploadBody({ fileType: 1, url: 'https://x/y.png', fileName: '   ' }), {
+    file_type: 1,
+    sdk_id: '',
+    url: 'https://x/y.png',
   })
 })

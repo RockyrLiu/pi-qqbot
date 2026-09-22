@@ -239,12 +239,37 @@ export interface UploadMediaResult {
   ttl: number
 }
 
+export interface UploadMediaParams {
+  fileType: number
+  fileData?: string
+  url?: string
+  sdkId?: string
+  /** 文件名。file_type=4（文件）时必填，否则 QQ 端显示为「未命名」。 */
+  fileName?: string
+}
+
+/**
+ * 构造富媒体上传体。
+ * 关键：file_type=4（文件）必须携带 `file_name`，否则 QQ 客户端显示「未命名」。
+ */
+export function buildUploadBody(params: UploadMediaParams): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    file_type: params.fileType,
+    sdk_id: params.sdkId ?? '',
+  }
+  if (params.fileData) body.file_data = params.fileData
+  if (params.url) body.url = params.url
+  const fileName = params.fileName?.trim()
+  if (fileName) body.file_name = fileName
+  return body
+}
+
 /** file_type: 1=图片, 2=视频, 3=音频, 4=文件 */
 export async function uploadC2cMedia(
   apiBase: string,
   token: string,
   openId: string,
-  params: { fileType: number; fileData?: string; url?: string; sdkId?: string },
+  params: UploadMediaParams,
   signal?: AbortSignal,
 ): Promise<UploadMediaResult> {
   return uploadMedia(`${apiBase}/v2/users/${encodeURIComponent(openId)}/files`, token, params, signal)
@@ -254,7 +279,7 @@ export async function uploadGroupMedia(
   apiBase: string,
   token: string,
   groupOpenId: string,
-  params: { fileType: number; fileData?: string; url?: string; sdkId?: string },
+  params: UploadMediaParams,
   signal?: AbortSignal,
 ): Promise<UploadMediaResult> {
   return uploadMedia(`${apiBase}/v2/groups/${encodeURIComponent(groupOpenId)}/files`, token, params, signal)
@@ -263,15 +288,10 @@ export async function uploadGroupMedia(
 async function uploadMedia(
   endpoint: string,
   token: string,
-  params: { fileType: number; fileData?: string; url?: string; sdkId?: string },
+  params: UploadMediaParams,
   signal?: AbortSignal,
 ): Promise<UploadMediaResult> {
-  const body: Record<string, unknown> = {
-    file_type: params.fileType,
-    sdk_id: params.sdkId ?? '',
-  }
-  if (params.fileData) body.file_data = params.fileData
-  if (params.url) body.url = params.url
+  const body = buildUploadBody(params)
 
   const payload = await requestJson<Record<string, unknown>>(endpoint, {
     method: 'POST',
