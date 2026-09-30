@@ -35,7 +35,8 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
   },
   "peerDependenciesMeta": {
     "@earendil-works/pi-coding-agent": {
@@ -43,8 +44,7 @@
     }
   },
   "dependencies": {
-    "qrcode-terminal": "^0.12.0",
-    "typebox": "^1.0.0"
+    "qrcode-terminal": "^0.12.0"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "*",
